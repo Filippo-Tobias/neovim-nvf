@@ -23,65 +23,164 @@
                 vim.viAlias = false;
                 vim.vimAlias = false;
 
+                vim.luaConfigRC.yankSync = /* lua */ ''
+                  vim.api.nvim_create_autocmd("TextYankPost", {
+                    group = vim.api.nvim_create_augroup("YankToSystem", { clear = true }),
+                    callback = function()
+                      if vim.v.event.operator == "y" then
+                        vim.fn.setreg("+", vim.fn.getreg('"'))
+                      end
+                    end,
+                  })
+                '';
+
+                vim.luaConfigRC.pasteWithNewline /* lua */ = ''
+                  vim.keymap.set('x', 'P', function()
+                    vim.cmd('normal! gvp`]')
+                    vim.api.nvim_put({""}, "c", true, true)
+                  end, { desc = 'Reliably paste then newline' })
+                '';
+                vim.luaConfigRC.smartBlockAlign /* lua */ = ''
+
+                  _G.AlignBlockIndent = function(align_to)
+
+                    local start_line = vim.fn.line("'<")
+                    local end_line = vim.fn.line("'>")
+
+                    if start_line == end_line then return end
+
+                    local ref_line, target_line, shift_start, shift_end
+
+                    if align_to == "top" then
+                      ref_line = start_line
+                      target_line = end_line
+                      shift_start = start_line + 1
+                      shift_end = end_line
+                    else
+                      ref_line = end_line
+                      target_line = start_line
+                      shift_start = start_line
+                      shift_end = end_line - 1
+                    end
+
+                    local ref_indent = vim.fn.indent(ref_line)
+                    local target_indent = vim.fn.indent(target_line)
+                    local diff = ref_indent - target_indent
+
+                    if diff == 0 then return end
+
+                    for i = shift_start, shift_end do
+                      local line_str = vim.fn.getline(i)
+                      
+                      if line_str:match("%S") then 
+                        local current_ws = line_str:match("^%s*")
+                        local content = line_str:gsub("^%s*", "")
+                        
+                        local expanded_ws_len = vim.fn.strdisplaywidth(current_ws)
+                        local new_ws_len = math.max(0, expanded_ws_len + diff)
+                        
+                        vim.fn.setline(i, string.rep(" ", new_ws_len) .. content)
+                      end
+                    end
+                  end
+                '';
+
+                vim.luaConfigRC.autoBracketAlign =  /* lua */ ''
+                  _G.AutoAlignBracket = function()
+                    local start_line = vim.fn.line('.')
+                    local start_col = vim.fn.col('.')
+                    local line_str = vim.fn.getline('.')
+                    local current_char = line_str:sub(start_col, start_col)
+
+                    if current_char ~= "{" and current_char ~= "}" then
+                      vim.notify("Cursor must be exactly on a '{' or '}'", vim.log.levels.WARN)
+                      return
+                    end
+
+                    local win_view = vim.fn.winsaveview()
+
+                    vim.cmd("normal! %")
+                    local match_line = vim.fn.line('.')
+
+                    vim.fn.winrestview(win_view)
+
+                    if start_line == match_line then return end
+
+                    if current_char == "{" then
+                      vim.fn.setpos("'<", {0, start_line, 1, 0})
+                      vim.fn.setpos("'>", {0, match_line, 1, 0})
+                      _G.AlignBlockIndent("top")
+                    else
+                      vim.fn.setpos("'<", {0, match_line, 1, 0})
+                      vim.fn.setpos("'>", {0, start_line, 1, 0})
+                      _G.AlignBlockIndent("bottom")
+                    end
+                  end
+                '';
+
                 vim = {
                   globals.mapleader = " ";
+                  lineNumberMode = "number";
+                  
                   extraPackages = [ 
                     pkgs.lua-language-server 
                     pkgs.nodePackages.bash-language-server 
+                    pkgs.nixfmt 
+                    pkgs.jdk25
                   ];
 
-                  # Lua Status Bar
+                  lsp.formatOnSave = true;
+                  lsp.otter-nvim.enable = true;
                   statusline.lualine.enable = true;
-
-                  # Telescope
                   telescope.enable = true;
 
-                  # Rust Support
-                  languages.rust = {
+                  languages.rust.enable = true;
+                  languages.rust.lsp.enable = true;
+                  languages.rust.treesitter.enable = true;
+
+                  languages.python.enable = true;
+                  languages.python.lsp.enable = true;
+                  languages.python.treesitter.enable = true;
+
+                  languages.java = {
                     enable = true;
                     lsp.enable = true;
                     treesitter.enable = true;
                   };
 
-                  # Nix Language Support
+                  languages.ts.enable = true;
+                  languages.ts.lsp.enable = true;
+                  languages.ts.treesitter.enable = true;
+
                   languages.nix = {
                     enable = true;
                     lsp.enable = true;
-                    lsp.servers = ["nixd"];
+                    lsp.server = [ "nixd" ];
                     treesitter.enable = true;
                     format.enable = true; 
+                    format.type = ["nixfmt"];
                   };
 
-                  # Lua Language Support
-                  languages.lua = {
-                    enable = true;
-                    lsp.enable = true;
-                    treesitter.enable = true;
-                  };
+                  languages.lua.enable = true;
+                  languages.lua.lsp.enable = true;
+                  languages.lua.treesitter.enable = true;
+                  languages.markdown.enable = true; 
 
-                  # Nvim Tree
                   filetree.nvimTree = {
                     enable = true;
                     openOnSetup = false;
                   };
-
-                  # Keybind Menu
                   binds.whichKey.enable = true;
-
-                  # System Clipboard Integration
-                  clipboard.registers = "unnamedplus";
-
-                  # Indentation Detection
                   utility.sleuth.enable = true;
 
-                  # Theme
                   theme = {
                     enable = true;
                     name = "gruvbox";
                     style = "dark";
                   };
                   
-                  # Enables nvim-cmp
+                  autopairs.nvim-autopairs.enable = true;
+                  
                   autocomplete.nvim-cmp = {
                     enable = true; 
                     mappings = {
@@ -91,8 +190,61 @@
                     };
                   };
 
-                  # Custom Keybindings
                   keymaps = [
+                    {
+                      mode = "n";
+                      key = "<leader><Tab>b"; 
+                      action = ":lua _G.AutoAlignBracket()<CR>";
+                      desc = "Align entire {} block to the current bracket";
+                    }
+                    {
+                      mode = ["n" "i" "x"];
+                      key = "p";
+                      action = "P";
+                      desc = "Paste without copying overwritten text";
+                    }
+                    {
+                      mode = "x";
+                      key = "<leader><Tab>k";
+                      action = ":<C-u>lua _G.AlignBlockIndent('top')<CR>";
+                      desc = "Align block indentation to TOP line";
+                    }
+                    {
+                      mode = "x";
+                      key = "<leader><Tab>j";
+                      action = ":<C-u>lua _G.AlignBlockIndent('bottom')<CR>";
+                      desc = "Align block indentation to BOTTOM line";
+                    }
+                    {
+                      key = "<Esc>";
+                      mode = "n";
+                      action = ":nohlsearch<CR>";
+                      desc = "Clear search highlights on Escape";
+                    }
+                    {
+                      mode = "i";
+                      key = "<C-v>";                    
+                      action = "<C-r><C-o>+";
+                      desc = "Literal paste from system clipboard";
+                    }
+                    {
+                      mode = "n";
+                      key = "<C-v>";                    
+                      action = "\"+p";
+                      desc = "Paste from system clipboard";
+                    }
+                    {
+                      key = "<leader>ca";
+                      mode = "n";
+                      action = ":lua vim.lsp.buf.code_action()<CR>";
+                      desc = "LSP Code Actions";
+                    }
+                    {
+                      key = "<C-Space>";
+                      mode = "n";
+                      action = ":lua vim.diagnostic.open_float()<CR>";
+                      desc = "Open diagnostic popup";
+                    }
                     {
                       key = ";";
                       mode = [ "n" "v" ];
