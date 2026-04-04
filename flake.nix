@@ -198,7 +198,7 @@
                       desc = "Align entire {} block to the current bracket";
                     }
                     {
-                      mode = ["n" "i" "x"];
+                      mode = ["n" "x"];
                       key = "p";
                       action = "P";
                       desc = "Paste without copying overwritten text";
