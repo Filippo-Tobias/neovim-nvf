@@ -127,12 +127,20 @@
                     pkgs.nodePackages.bash-language-server 
                     pkgs.nixfmt 
                     pkgs.jdk25
+                    pkgs.netcat
                   ];
 
                   lsp.formatOnSave = true;
                   lsp.otter-nvim.enable = true;
                   statusline.lualine.enable = true;
                   telescope.enable = true;
+
+                  lsp.servers.gdscript = {
+                    enable = true;
+                    cmd = [ "nc" "127.0.0.1" "6005" ];
+                    filetypes = [ "gdscript" "gd" ];
+                    root_markers = [ "project.godot" ".git" ];
+                  };
 
                   languages.rust.enable = true;
                   languages.rust.lsp.enable = true;
@@ -155,7 +163,7 @@
                   languages.nix = {
                     enable = true;
                     lsp.enable = true;
-                    lsp.server = [ "nixd" ];
+                    lsp.servers = [ "nixd" ];
                     treesitter.enable = true;
                     format.enable = true; 
                     format.type = ["nixfmt"];
@@ -166,6 +174,25 @@
                   languages.lua.treesitter.enable = true;
                   languages.markdown.enable = true; 
 
+                  tabline.nvimBufferline = {
+                    enable = true;
+                    setupOpts = {
+                      options = {
+                        separator_style = "thick";
+                        offsets = [
+                          {
+                            filetype = "NvimTree";
+                            text = "File Explorer";
+                            highlight = "Directory";
+                            text_align = "left";
+                          }
+                        ];
+                      };
+                    };
+                  };
+
+                  treesitter.grammars = [ pkgs.vimPlugins.nvim-treesitter.builtGrammars.gdscript ];
+                  
                   filetree.nvimTree = {
                     enable = true;
                     openOnSetup = false;
@@ -280,6 +307,24 @@
                       mode = "n";
                       action = "<C-w>l";
                       desc = "Move to right window";
+                    }
+                    {
+                      key = "<A-,>";
+                      mode = "n";
+                      action = ":BufferLineCyclePrev<CR>";
+                      desc = "Cycle to previous buffer";
+                    }
+                    {
+                      key = "<A-.>";
+                      mode = "n";
+                      action = ":BufferLineCycleNext<CR>";
+                      desc = "Cycle to next buffer";
+                    }
+                    {
+                      key = "<Tab>";
+                      mode = "n";
+                      action = ":Telescope buffers<CR>";
+                      desc = "Search Buffers (Telescope)";
                     }
                     {
                       key = "<leader>ff";
