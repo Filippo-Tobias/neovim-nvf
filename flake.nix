@@ -6,13 +6,25 @@
     nvf.url = "github:notashelf/nvf";
   };
 
-  outputs = { self, nixpkgs, nvf, ... }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      nvf,
+      ...
+    }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
-      packages = forAllSystems (system:
+      packages = forAllSystems (
+        system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
 
@@ -34,58 +46,60 @@
                   })
                 '';
 
-                vim.luaConfigRC.pasteWithNewline /* lua */ = ''
-                  vim.keymap.set('x', 'P', function()
-                    vim.cmd('normal! gvp`]')
-                    vim.api.nvim_put({""}, "c", true, true)
-                  end, { desc = 'Reliably paste then newline' })
-                '';
-                vim.luaConfigRC.smartBlockAlign /* lua */ = ''
+                vim.luaConfigRC.pasteWithNewline # lua
+                  = ''
+                    vim.keymap.set('x', 'P', function()
+                      vim.cmd('normal! gvp`]')
+                      vim.api.nvim_put({""}, "c", true, true)
+                    end, { desc = 'Reliably paste then newline' })
+                  '';
+                vim.luaConfigRC.smartBlockAlign # lua
+                  = ''
 
-                  _G.AlignBlockIndent = function(align_to)
+                    _G.AlignBlockIndent = function(align_to)
 
-                    local start_line = vim.fn.line("'<")
-                    local end_line = vim.fn.line("'>")
+                      local start_line = vim.fn.line("'<")
+                      local end_line = vim.fn.line("'>")
 
-                    if start_line == end_line then return end
+                      if start_line == end_line then return end
 
-                    local ref_line, target_line, shift_start, shift_end
+                      local ref_line, target_line, shift_start, shift_end
 
-                    if align_to == "top" then
-                      ref_line = start_line
-                      target_line = end_line
-                      shift_start = start_line + 1
-                      shift_end = end_line
-                    else
-                      ref_line = end_line
-                      target_line = start_line
-                      shift_start = start_line
-                      shift_end = end_line - 1
-                    end
+                      if align_to == "top" then
+                        ref_line = start_line
+                        target_line = end_line
+                        shift_start = start_line + 1
+                        shift_end = end_line
+                      else
+                        ref_line = end_line
+                        target_line = start_line
+                        shift_start = start_line
+                        shift_end = end_line - 1
+                      end
 
-                    local ref_indent = vim.fn.indent(ref_line)
-                    local target_indent = vim.fn.indent(target_line)
-                    local diff = ref_indent - target_indent
+                      local ref_indent = vim.fn.indent(ref_line)
+                      local target_indent = vim.fn.indent(target_line)
+                      local diff = ref_indent - target_indent
 
-                    if diff == 0 then return end
+                      if diff == 0 then return end
 
-                    for i = shift_start, shift_end do
-                      local line_str = vim.fn.getline(i)
-                      
-                      if line_str:match("%S") then 
-                        local current_ws = line_str:match("^%s*")
-                        local content = line_str:gsub("^%s*", "")
+                      for i = shift_start, shift_end do
+                        local line_str = vim.fn.getline(i)
                         
-                        local expanded_ws_len = vim.fn.strdisplaywidth(current_ws)
-                        local new_ws_len = math.max(0, expanded_ws_len + diff)
-                        
-                        vim.fn.setline(i, string.rep(" ", new_ws_len) .. content)
+                        if line_str:match("%S") then 
+                          local current_ws = line_str:match("^%s*")
+                          local content = line_str:gsub("^%s*", "")
+                          
+                          local expanded_ws_len = vim.fn.strdisplaywidth(current_ws)
+                          local new_ws_len = math.max(0, expanded_ws_len + diff)
+                          
+                          vim.fn.setline(i, string.rep(" ", new_ws_len) .. content)
+                        end
                       end
                     end
-                  end
-                '';
+                  '';
 
-                vim.luaConfigRC.autoBracketAlign =  /* lua */ ''
+                vim.luaConfigRC.autoBracketAlign = /* lua */ ''
                   _G.AutoAlignBracket = function()
                     local start_line = vim.fn.line('.')
                     local start_col = vim.fn.col('.')
@@ -121,15 +135,19 @@
                 vim = {
                   globals.mapleader = " ";
                   lineNumberMode = "number";
-                  
-                  extraPackages = [ 
-                    pkgs.lua-language-server 
-                    pkgs.nodePackages.bash-language-server 
-                    pkgs.nixfmt 
+
+                  extraPackages = [
+                    pkgs.lua-language-server
+                    pkgs.nodePackages.bash-language-server
+                    pkgs.typescript-language-server
+                    pkgs.vtsls
+                    pkgs.typescript
+                    pkgs.nixfmt
                     pkgs.jdk25
                     pkgs.netcat
                   ];
 
+                  lsp.enable = true;
                   lsp.formatOnSave = true;
                   lsp.otter-nvim.enable = true;
                   statusline.lualine.enable = true;
@@ -137,9 +155,28 @@
 
                   lsp.servers.gdscript = {
                     enable = true;
-                    cmd = [ "nc" "127.0.0.1" "6005" ];
-                    filetypes = [ "gdscript" "gd" ];
-                    root_markers = [ "project.godot" ".git" ];
+                    cmd = [
+                      "nc"
+                      "127.0.0.1"
+                      "6005"
+                    ];
+                    filetypes = [
+                      "gdscript"
+                      "gd"
+                    ];
+                    root_markers = [
+                      "project.godot"
+                      ".git"
+                    ];
+                  };
+
+                  lsp.servers.tsgo = {
+                    enable = true;
+                    root_markers = [
+                      "tsconfig.json"
+                      "package.json"
+                      ".git"
+                    ];
                   };
 
                   languages.rust.enable = true;
@@ -156,23 +193,26 @@
                     treesitter.enable = true;
                   };
 
-                  languages.ts.enable = true;
-                  languages.ts.lsp.enable = true;
-                  languages.ts.treesitter.enable = true;
+                  languages.ts = {
+                    enable = true;
+                    lsp.enable = true;
+                    lsp.servers = [ "tsgo" ];
+                    treesitter.enable = true;
+                  };
 
                   languages.nix = {
                     enable = true;
                     lsp.enable = true;
                     lsp.servers = [ "nixd" ];
                     treesitter.enable = true;
-                    format.enable = true; 
-                    format.type = ["nixfmt"];
+                    format.enable = true;
+                    format.type = [ "nixfmt" ];
                   };
 
                   languages.lua.enable = true;
                   languages.lua.lsp.enable = true;
                   languages.lua.treesitter.enable = true;
-                  languages.markdown.enable = true; 
+                  languages.markdown.enable = true;
 
                   tabline.nvimBufferline = {
                     enable = true;
@@ -192,7 +232,7 @@
                   };
 
                   treesitter.grammars = [ pkgs.vimPlugins.nvim-treesitter.builtGrammars.gdscript ];
-                  
+
                   filetree.nvimTree = {
                     enable = true;
                     openOnSetup = false;
@@ -205,27 +245,42 @@
                     name = "gruvbox";
                     style = "dark";
                   };
-                  
+
                   autopairs.nvim-autopairs.enable = true;
-                  
-                  autocomplete.nvim-cmp = {
-                    enable = true; 
-                    mappings = {
-                      next = "<A-j>";
-                      previous = "<A-k>";
-                      confirm = "<Tab>";
+
+                  snippets.luasnip.enable = true;
+
+                  autocomplete.blink-cmp = {
+                    enable = true;
+                    setupOpts.keymap = {
+                      preset = "default";
+                      "<Tab>" = pkgs.lib.mkForce [
+                        "snippet_forward"
+                        "select_and_accept"
+                        "fallback"
+                      ];
+                      "<A-j>" = pkgs.lib.mkForce [
+                        "select_next"
+                        "fallback"
+                      ];
+                      "<A-k>" = pkgs.lib.mkForce [
+                        "select_prev"
+                        "fallback"
+                      ];
                     };
                   };
-
                   keymaps = [
                     {
                       mode = "n";
-                      key = "<leader><Tab>b"; 
+                      key = "<leader><Tab>b";
                       action = ":lua _G.AutoAlignBracket()<CR>";
                       desc = "Align entire {} block to the current bracket";
                     }
                     {
-                      mode = ["n" "x"];
+                      mode = [
+                        "n"
+                        "x"
+                      ];
                       key = "p";
                       action = "P";
                       desc = "Paste without copying overwritten text";
@@ -250,13 +305,13 @@
                     }
                     {
                       mode = "i";
-                      key = "<C-v>";                    
+                      key = "<C-v>";
                       action = "<C-r><C-o>+";
                       desc = "Literal paste from system clipboard";
                     }
                     {
                       mode = "n";
-                      key = "<C-v>";                    
+                      key = "<C-v>";
                       action = "\"+p";
                       desc = "Paste from system clipboard";
                     }
@@ -274,7 +329,10 @@
                     }
                     {
                       key = ";";
-                      mode = [ "n" "v" ];
+                      mode = [
+                        "n"
+                        "v"
+                      ];
                       action = ":";
                       desc = "Enter command mode";
                     }
