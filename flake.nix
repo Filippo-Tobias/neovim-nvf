@@ -46,58 +46,46 @@
                   })
                 '';
 
-                vim.luaConfigRC.pasteWithNewline # lua
-                  = ''
-                    vim.keymap.set('x', 'P', function()
-                      vim.cmd('normal! gvp`]')
-                      vim.api.nvim_put({""}, "c", true, true)
-                    end, { desc = 'Reliably paste then newline' })
-                  '';
-                vim.luaConfigRC.smartBlockAlign # lua
-                  = ''
+                vim.luaConfigRC.pasteWithNewline = /* lua */ ''
+                  vim.keymap.set('x', 'P', function()
+                    vim.cmd('normal! gvp`]')
+                    vim.api.nvim_put({""}, "c", true, true)
+                  end, { desc = 'Reliably paste then newline' })
+                '';
 
-                    _G.AlignBlockIndent = function(align_to)
-
-                      local start_line = vim.fn.line("'<")
-                      local end_line = vim.fn.line("'>")
-
-                      if start_line == end_line then return end
-
-                      local ref_line, target_line, shift_start, shift_end
-
-                      if align_to == "top" then
-                        ref_line = start_line
-                        target_line = end_line
-                        shift_start = start_line + 1
-                        shift_end = end_line
-                      else
-                        ref_line = end_line
-                        target_line = start_line
-                        shift_start = start_line
-                        shift_end = end_line - 1
-                      end
-
-                      local ref_indent = vim.fn.indent(ref_line)
-                      local target_indent = vim.fn.indent(target_line)
-                      local diff = ref_indent - target_indent
-
-                      if diff == 0 then return end
-
-                      for i = shift_start, shift_end do
-                        local line_str = vim.fn.getline(i)
-                        
-                        if line_str:match("%S") then 
-                          local current_ws = line_str:match("^%s*")
-                          local content = line_str:gsub("^%s*", "")
-                          
-                          local expanded_ws_len = vim.fn.strdisplaywidth(current_ws)
-                          local new_ws_len = math.max(0, expanded_ws_len + diff)
-                          
-                          vim.fn.setline(i, string.rep(" ", new_ws_len) .. content)
-                        end
+                vim.luaConfigRC.smartBlockAlign = /* lua */ ''
+                  _G.AlignBlockIndent = function(align_to)
+                    local start_line = vim.fn.line("'<")
+                    local end_line = vim.fn.line("'>")
+                    if start_line == end_line then return end
+                    local ref_line, target_line, shift_start, shift_end
+                    if align_to == "top" then
+                      ref_line = start_line
+                      target_line = end_line
+                      shift_start = start_line + 1
+                      shift_end = end_line
+                    else
+                      ref_line = end_line
+                      target_line = start_line
+                      shift_start = start_line
+                      shift_end = end_line - 1
+                    end
+                    local ref_indent = vim.fn.indent(ref_line)
+                    local target_indent = vim.fn.indent(target_line)
+                    local diff = ref_indent - target_indent
+                    if diff == 0 then return end
+                    for i = shift_start, shift_end do
+                      local line_str = vim.fn.getline(i)
+                      if line_str:match("%S") then 
+                        local current_ws = line_str:match("^%s*")
+                        local content = line_str:gsub("^%s*", "")
+                        local expanded_ws_len = vim.fn.strdisplaywidth(current_ws)
+                        local new_ws_len = math.max(0, expanded_ws_len + diff)
+                        vim.fn.setline(i, string.rep(" ", new_ws_len) .. content)
                       end
                     end
-                  '';
+                  end
+                '';
 
                 vim.luaConfigRC.autoBracketAlign = /* lua */ ''
                   _G.AutoAlignBracket = function()
@@ -105,21 +93,15 @@
                     local start_col = vim.fn.col('.')
                     local line_str = vim.fn.getline('.')
                     local current_char = line_str:sub(start_col, start_col)
-
                     if current_char ~= "{" and current_char ~= "}" then
                       vim.notify("Cursor must be exactly on a '{' or '}'", vim.log.levels.WARN)
                       return
                     end
-
                     local win_view = vim.fn.winsaveview()
-
                     vim.cmd("normal! %")
                     local match_line = vim.fn.line('.')
-
                     vim.fn.winrestview(win_view)
-
                     if start_line == match_line then return end
-
                     if current_char == "{" then
                       vim.fn.setpos("'<", {0, start_line, 1, 0})
                       vim.fn.setpos("'>", {0, match_line, 1, 0})
@@ -130,6 +112,36 @@
                       _G.AlignBlockIndent("bottom")
                     end
                   end
+                '';
+
+                vim.luaConfigRC.rustacean = /* lua */ ''
+                  vim.g.rustaceanvim = {
+                    server = {
+                      default_settings = {
+                        ["rust-analyzer"] = {
+                          cargo = {
+                            targetDir = vim.NIL,  -- Share the cache
+                            buildScripts = { enable = true },
+                            extraEnv = {
+                              CARGO = vim.fn.exepath("cargo"),
+                            },
+                          },
+                          checkOnSave = true,
+                          check = { 
+                            command = "clippy",
+                            extraEnv = {
+                              CARGO = vim.fn.exepath("cargo"),
+                            },
+                          },
+                          cachePriming = { enable = true },
+                          files = { watcher = "client" },
+                          procMacro = { enable = true },
+                          rustc = { source = "discover" },
+                          diagnostics = { enable = true },
+                        }
+                      }
+                    }
+                  }
                 '';
 
                 vim = {
@@ -179,9 +191,33 @@
                     ];
                   };
 
-                  languages.rust.enable = true;
-                  languages.rust.lsp.enable = true;
-                  languages.rust.treesitter.enable = true;
+                  visuals.fidget-nvim = {
+                    enable = true;
+
+                    # nvf automatically translates this Nix attrset into the Lua setup() table
+                    setupOpts = {
+                      progress = {
+                        display = {
+                          render_limit = 16;
+                          done_icon = "✓";
+                        };
+                      };
+                      notification = {
+                        window = {
+                          winblend = 0;
+                        };
+                      };
+                    };
+                  };
+
+                  languages.rust = {
+                    enable = true;
+                    lsp.enable = true;
+                    treesitter.enable = true;
+                    # EXPLICITLY set to null to prevent NVF from installing rust-analyzer
+                    # This guarantees it uses the one in your PATH (devshell).
+                    lsp.package = [ "rust-analyzer" ];
+                  };
 
                   languages.python.enable = true;
                   languages.python.lsp.enable = true;
@@ -216,18 +252,16 @@
 
                   tabline.nvimBufferline = {
                     enable = true;
-                    setupOpts = {
-                      options = {
-                        separator_style = "thick";
-                        offsets = [
-                          {
-                            filetype = "NvimTree";
-                            text = "File Explorer";
-                            highlight = "Directory";
-                            text_align = "left";
-                          }
-                        ];
-                      };
+                    setupOpts.options = {
+                      separator_style = "thick";
+                      offsets = [
+                        {
+                          filetype = "NvimTree";
+                          text = "File Explorer";
+                          highlight = "Directory";
+                          text_align = "left";
+                        }
+                      ];
                     };
                   };
 
@@ -247,7 +281,6 @@
                   };
 
                   autopairs.nvim-autopairs.enable = true;
-
                   snippets.luasnip.enable = true;
 
                   autocomplete.blink-cmp = {
@@ -269,6 +302,7 @@
                       ];
                     };
                   };
+
                   keymaps = [
                     {
                       mode = "n";
@@ -302,18 +336,6 @@
                       mode = "n";
                       action = ":nohlsearch<CR>";
                       desc = "Clear search highlights on Escape";
-                    }
-                    {
-                      mode = "i";
-                      key = "<C-v>";
-                      action = "<C-r><C-o>+";
-                      desc = "Literal paste from system clipboard";
-                    }
-                    {
-                      mode = "n";
-                      key = "<C-v>";
-                      action = "\"+p";
-                      desc = "Paste from system clipboard";
                     }
                     {
                       key = "<leader>ca";
