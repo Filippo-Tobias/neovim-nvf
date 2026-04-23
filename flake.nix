@@ -145,12 +145,13 @@
                 '';
 
                 vim = {
+                  undoFile.enable = true;
                   globals.mapleader = " ";
                   lineNumberMode = "number";
 
                   extraPackages = [
                     pkgs.lua-language-server
-                    pkgs.nodePackages.bash-language-server
+                    pkgs.bash-language-server
                     pkgs.typescript-language-server
                     pkgs.vtsls
                     pkgs.typescript
