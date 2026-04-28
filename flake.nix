@@ -46,13 +46,6 @@
                   })
                 '';
 
-                vim.luaConfigRC.pasteWithNewline = /* lua */ ''
-                  vim.keymap.set('x', 'P', function()
-                    vim.cmd('normal! gvp`]')
-                    vim.api.nvim_put({""}, "c", true, true)
-                  end, { desc = 'Reliably paste then newline' })
-                '';
-
                 vim.luaConfigRC.smartBlockAlign = /* lua */ ''
                   _G.AlignBlockIndent = function(align_to)
                     local start_line = vim.fn.line("'<")
@@ -291,7 +284,6 @@
                       "<Tab>" = pkgs.lib.mkForce [
                         "snippet_forward"
                         "select_and_accept"
-                        "fallback"
                       ];
                       "<A-j>" = pkgs.lib.mkForce [
                         "select_next"
@@ -313,7 +305,6 @@
                     }
                     {
                       mode = [
-                        "n"
                         "x"
                       ];
                       key = "p";
@@ -400,6 +391,12 @@
                       mode = "n";
                       action = ":BufferLineCycleNext<CR>";
                       desc = "Cycle to next buffer";
+                    }
+                    {
+                      key = "<leader>x";
+                      mode = "n";
+                      action = ":confirm bd<CR>";
+                      desc = "Close current buffer";
                     }
                     {
                       key = "<Tab>";
