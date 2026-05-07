@@ -284,6 +284,7 @@
                       "<Tab>" = pkgs.lib.mkForce [
                         "snippet_forward"
                         "select_and_accept"
+                        "fallback"
                       ];
                       "<A-j>" = pkgs.lib.mkForce [
                         "select_next"
