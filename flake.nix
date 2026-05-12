@@ -107,6 +107,20 @@
                   end
                 '';
 
+                vim.luaConfigRC.bufferlineFix = /* lua */ ''
+                  _G.TbLeftClick = function(bufnum)
+                    if vim.bo.filetype == "NvimTree" then
+                      local wins = vim.api.nvim_tabpage_list_wins(0)
+                      if #wins == 1 then
+                        vim.cmd("vsplit")
+                      else
+                        vim.cmd("wincmd p")
+                      end
+                    end
+                    vim.cmd("buffer " .. bufnum)
+                  end
+                '';
+
                 vim.luaConfigRC.rustacean = /* lua */ ''
                   vim.g.rustaceanvim = {
                     server = {
@@ -247,6 +261,7 @@
                   tabline.nvimBufferline = {
                     enable = true;
                     setupOpts.options = {
+                      left_mouse_command = "lua _G.TbLeftClick(%d)";
                       separator_style = "thick";
                       offsets = [
                         {
@@ -264,6 +279,7 @@
                   filetree.nvimTree = {
                     enable = true;
                     openOnSetup = false;
+                    setupOpts.view.preserve_window_proportions = true;
                   };
                   binds.whichKey.enable = true;
                   utility.sleuth.enable = true;
