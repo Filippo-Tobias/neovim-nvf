@@ -151,6 +151,37 @@
                   }
                 '';
 
+                # Auto-detect venv for basedpyright
+                vim.luaConfigRC.pyrightVenv = /* lua */ ''
+                  vim.api.nvim_create_autocmd("LspAttach", {
+                    group = vim.api.nvim_create_augroup("PyrightVenvDetect", { clear = true }),
+                    callback = function(args)
+                      local client = vim.lsp.get_client_by_id(args.data.client_id)
+                      if not client or client.name ~= "basedpyright" then
+                        return
+                      end
+
+                      local python_path = nil
+
+                      if vim.env.VIRTUAL_ENV then
+                        python_path = vim.env.VIRTUAL_ENV .. "/bin/python"
+                      elseif client.root_dir then
+                        local venv = client.root_dir .. "/.venv"
+                        if vim.fn.isdirectory(venv) == 1 then
+                          python_path = venv .. "/bin/python"
+                        end
+                      end
+
+                      if python_path and vim.fn.executable(python_path) == 1 then
+                        client.config.settings = vim.tbl_deep_extend("force", client.config.settings or {}, {
+                          python = { pythonPath = python_path },
+                        })
+                        client:notify("workspace/didChangeConfiguration", { settings = client.config.settings })
+                      end
+                    end,
+                  })
+                '';
+
                 vim = {
                   undoFile.enable = true;
                   globals.mapleader = " ";
