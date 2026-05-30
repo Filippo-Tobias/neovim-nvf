@@ -2,7 +2,7 @@
   description = "Custom NVF configuration with Rust, Telescope, and Lualine";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/master";
     nvf.url = "github:notashelf/nvf";
   };
 
@@ -176,6 +176,54 @@
                         client.config.settings = vim.tbl_deep_extend("force", client.config.settings or {}, {
                           python = { pythonPath = python_path },
                         })
+                        client:notify("workspace/didChangeConfiguration", { settings = client.config.settings })
+                      end
+                    end,
+                  })
+                '';
+
+                #Auto inject hyprland lua stubs
+                vim.luaConfigRC.hyprlandStubs = /* lua */ ''
+                  vim.api.nvim_create_autocmd("LspAttach", {
+                    group = vim.api.nvim_create_augroup("HyprlandLuaStubs", { clear = true }),
+                    callback = function(args)
+                      local client = vim.lsp.get_client_by_id(args.data.client_id)
+                      if not client or client.name ~= "lua_ls" then
+                        return
+                      end
+
+                      -- Grab the first line of the buffer
+                      local first_line = vim.api.nvim_buf_get_lines(args.buf, 0, 1, false)[1] or ""
+                      
+                      -- Check if the first line starts with "-- hyprland" (case-insensitive)
+                      local has_magic_comment = first_line:lower():match("^%-%-%s*hyprland")
+                      
+                      -- Check if in hypr dir
+                      local buf_path = vim.api.nvim_buf_get_name(args.buf)
+                      local is_hypr_dir = buf_path:match("/hypr/")
+
+                      if has_magic_comment or is_hypr_dir then
+                        local stubs_path = "${pkgs.hyprland}/share/hypr/stubs"
+                        
+                        local settings = client.config.settings or {}
+                        settings.Lua = settings.Lua or {}
+                        settings.Lua.workspace = settings.Lua.workspace or {}
+                        settings.Lua.diagnostics = settings.Lua.diagnostics or {}
+
+                        local function append_unique(tbl, val)
+                          tbl = tbl or {}
+                          for _, v in pairs(tbl) do
+                            if v == val then return tbl end
+                          end
+                          table.insert(tbl, val)
+                          return tbl
+                        end
+
+                        settings.Lua.workspace.library = append_unique(settings.Lua.workspace.library, stubs_path)
+                        settings.Lua.diagnostics.globals = append_unique(settings.Lua.diagnostics.globals, "hl")
+                        settings.Lua.diagnostics.disable = append_unique(settings.Lua.diagnostics.disable, "lowercase-global")
+
+                        client.config.settings = settings
                         client:notify("workspace/didChangeConfiguration", { settings = client.config.settings })
                       end
                     end,
