@@ -4,6 +4,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/master";
     nvf.url = "github:notashelf/nvf";
+    nvf.inputs.nixpkgs.follows = "nixpkgs";
+    nvf.inputs.mnw.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -230,6 +232,32 @@
                   })
                 '';
 
+                vim.luaConfigRC.blinkDocFix = /* lua */ ''
+                  -- Fix blink.cmp documentation error when LSP returns vim.NIL userdata
+                  -- https://github.com/Saghen/blink.cmp/issues/2456
+                  vim.api.nvim_create_autocmd("User", {
+                    pattern = "VeryLazy",
+                    callback = function()
+                      local ok, sources = pcall(require, "blink.cmp.sources.lib")
+                      if not ok then return end
+                      local orig_resolve = sources.resolve
+                      sources.resolve = function(context, item)
+                        return orig_resolve(context, item):map(function(resolved_item)
+                          local doc = resolved_item.documentation
+                          -- vim.NIL is userdata but == nil in boolean context; tostring(vim.NIL) == "userdata: NULL"
+                          if doc ~= nil and type(doc) ~= "table" and type(doc) ~= "string" then
+                            -- Check if it's vim.NIL specifically
+                            if type(doc) == "userdata" and tostring(doc) == "userdata: NULL" then
+                              resolved_item.documentation = nil
+                            end
+                          end
+                          return resolved_item
+                        end)
+                      end
+                    end,
+                  })
+                '';
+
                 vim = {
                   undoFile.enable = true;
                   globals.mapleader = " ";
@@ -358,7 +386,13 @@
                   filetree.nvimTree = {
                     enable = true;
                     openOnSetup = false;
-                    setupOpts.view.preserve_window_proportions = true;
+                    setupOpts = {
+                      view.preserve_window_proportions = true;
+                      diagnostics = {
+                        enable = true;
+                        show_on_dirs = true;
+                      };
+                    };
                   };
                   binds.whichKey.enable = true;
                   utility.sleuth.enable = true;
@@ -371,6 +405,7 @@
 
                   autopairs.nvim-autopairs.enable = true;
                   snippets.luasnip.enable = true;
+                  mini.bufremove.enable = true;
 
                   autocomplete.blink-cmp = {
                     enable = true;
@@ -491,7 +526,7 @@
                     {
                       key = "<leader>x";
                       mode = "n";
-                      action = ":confirm bd<CR>";
+                      action = ":lua MiniBufremove.delete(0, false)<CR>";
                       desc = "Close current buffer";
                     }
                     {
