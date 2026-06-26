@@ -37,16 +37,7 @@
                 vim.viAlias = false;
                 vim.vimAlias = false;
 
-                vim.luaConfigRC.yankSync = /* lua */ ''
-                  vim.api.nvim_create_autocmd("TextYankPost", {
-                    group = vim.api.nvim_create_augroup("YankToSystem", { clear = true }),
-                    callback = function()
-                      if vim.v.event.operator == "y" then
-                        vim.fn.setreg("+", vim.fn.getreg('"'))
-                      end
-                    end,
-                  })
-                '';
+
 
                 vim.luaConfigRC.smartBlockAlign = /* lua */ ''
                   _G.AlignBlockIndent = function(align_to)
@@ -264,6 +255,7 @@
                   lineNumberMode = "number";
 
                   extraPackages = [
+                    pkgs.wl-clipboard
                     pkgs.lua-language-server
                     pkgs.bash-language-server
                     pkgs.typescript-language-server
@@ -273,6 +265,8 @@
                     pkgs.jdk25
                     pkgs.netcat
                   ];
+
+                  clipboard.providers.wl-copy.enable = true;
 
                   lsp.enable = true;
                   lsp.formatOnSave = true;
@@ -435,6 +429,18 @@
                       key = "<leader><Tab>b";
                       action = ":lua _G.AutoAlignBracket()<CR>";
                       desc = "Align entire {} block to the current bracket";
+                    }
+                    {
+                      mode = [ "n" "x" ];
+                      key = "y";
+                      action = "\"+y";
+                      desc = "Yank to system clipboard";
+                    }
+                    {
+                      mode = [ "n" "x" ];
+                      key = "Y";
+                      action = "\"+Y";
+                      desc = "Yank line to system clipboard";
                     }
                     {
                       mode = [
