@@ -412,8 +412,10 @@
                     setupOpts.keymap = {
                       preset = "default";
                       "<Tab>" = pkgs.lib.mkForce [
-                        "snippet_forward"
                         "select_and_accept"
+                        "fallback"
+                      ];
+                      "<CR>" = pkgs.lib.mkForce [
                         "fallback"
                       ];
                       "<A-j>" = pkgs.lib.mkForce [
